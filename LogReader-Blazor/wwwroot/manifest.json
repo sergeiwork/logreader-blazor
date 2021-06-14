@@ -1,7 +1,7 @@
 {
   "name": "LogReader-Blazor",
   "short_name": "LogReader-Blazor",
-  "start_url": "./",
+  "start_url": "/logreader-blazor/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#03173d",
