@@ -1,3 +1,5 @@
+using Tewr.Blazor.FileReader;
+using Blazor.FileReader;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +20,7 @@ namespace LogReader_Blazor
             builder.RootComponents.Add<App>("#app");
 
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+            builder.Services.AddFileReaderService(options => options.UseWasmSharedBuffer = true);
 
             await builder.Build().RunAsync();
         }

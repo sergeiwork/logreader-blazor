@@ -1,8 +1,13 @@
 @page "/"
+@using Tewr.Blazor.FileReader
+@using System.IO;
+@inject IFileReaderService fileReaderService;
 
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
+
+<input type="file" @ref=inputTypeFileElement /><button @onclick=ReadFile>Read file</button>
 
 <table>
     <thead>
@@ -13,8 +18,33 @@ Welcome to your new app.
     </thead>
     <tbody>
         <tr>
-            <td>Hello</td>
-            <td>Hello</td>
+            <td>Hello223</td>
+            <td>Hello3</td>
+        </tr>
+        <tr>
+            <td>Hello2</td>
+            <td>Hello2</td>
         </tr>
     </tbody>
 </table>
+
+@code 
+{
+    private ElementReference inputTypeFileElement;
+
+    public async Task ReadFile()
+    {
+        var buffer = new byte[4096];
+        foreach (var file in await fileReaderService.CreateReference(inputTypeFileElement).EnumerateFilesAsync())
+        {
+            // Read into buffer and act (uses less memory)
+            await using (Stream stream = await file.OpenReadAsync()) {
+                while (stream.Position < stream.Length)
+                {
+                    var read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                    Console.WriteLine(read);
+                }
+            }
+        }
+    }
+}
