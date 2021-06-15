@@ -3,6 +3,8 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+    <AssemblyName>LogReader_Blazor</AssemblyName>
+    <RootNamespace>LogReader_Blazor</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,6 +1,8 @@
 @page "/"
 @using Tewr.Blazor.FileReader
 @using System.IO;
+@using System.Text;
+@using System.Text.Json;
 @inject IFileReaderService fileReaderService;
 
 <h1>Hello, world!</h1>
@@ -12,37 +14,116 @@ Welcome to your new app.
 <table>
     <thead>
         <tr>
-            <th>Test</th>
-            <th>Test2</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Lines</th>
         </tr>
     </thead>
     <tbody>
+    @foreach(var block in Blocks)
+    {
         <tr>
-            <td>Hello223</td>
-            <td>Hello3</td>
+            <td>@block.Start</td>
+            <td>@block.End</td>
+            <td>@block.Lines.Count</td>
         </tr>
         <tr>
-            <td>Hello2</td>
-            <td>Hello2</td>
+            <td><hr /></td>
+            <td><hr /></td>
+            <td><hr /></td>
         </tr>
+        @foreach (var line in block.Lines.Take(3))
+        {
+            <tr>
+                <td>@line.Start</td>
+                <td>@line.Length</td>
+                <td>@line.Worker</td>
+            </tr>
+        }
+    }
     </tbody>
 </table>
 
 @code 
 {
+    private class Block
+    {
+        public long Start { get; set; }
+
+        public long End { get; set; }
+
+        public List<Line> Lines { get; set; } = new List<Line>();
+    }
+
+    private class Line
+    {
+        public long Start { get; set; }
+
+        public long Length { get; set; }
+
+        public string Worker { get; set; }
+
+        public string Exception { get; set; }
+    }
+
     private ElementReference inputTypeFileElement;
+
+    private List<Block> Blocks = new List<Block>();
 
     public async Task ReadFile()
     {
-        var buffer = new byte[4096];
         foreach (var file in await fileReaderService.CreateReference(inputTypeFileElement).EnumerateFilesAsync())
         {
-            // Read into buffer and act (uses less memory)
+            Console.WriteLine(DateTime.Now);
             await using (Stream stream = await file.OpenReadAsync()) {
                 while (stream.Position < stream.Length)
                 {
+                    Console.WriteLine($"Reading block at {stream.Position}");
+                    var buffer = new byte[1024 * 1024 * 10];
+                    var block = new Block();
+                    block.Start = stream.Position;
                     var read = await stream.ReadAsync(buffer, 0, buffer.Length);
-                    Console.WriteLine(read);
+                    var currentIndex = 0;
+                    var lastIndex = 0;
+                    var lines = 0;
+                    do
+                    {
+                        while (currentIndex < read && buffer[currentIndex] != '\n')
+                            currentIndex++;
+                        currentIndex += currentIndex < read - 1 ? 1 : 0;
+
+                        if (currentIndex - lastIndex <= 0)
+                            break;
+
+                        var line = Encoding.UTF8.GetString(buffer, lastIndex, currentIndex - lastIndex);
+
+                        if (line.EndsWith('\n'))
+                        {
+                            try
+                            {
+                                var jobject = JsonDocument.Parse(line, new JsonDocumentOptions());
+                                block.Lines.Add(new()
+                                {
+                                    Start = lastIndex,
+                                    Length = currentIndex - lastIndex,
+                                    Worker = jobject.RootElement.Get("Properties")?.Get("WorkerName")?.GetString(),
+                                    Exception = jobject.RootElement.Get("Exception")?.GetString().Split(':').First()
+                                });
+                            }
+                            catch
+                            {
+                                Console.WriteLine(line);
+                            }
+                            lastIndex = currentIndex;
+                            lines++;
+                        }
+                    } while (currentIndex < read);
+
+                    block.End = lastIndex + block.Start;
+                    stream.Seek(block.End, SeekOrigin.Begin);
+                    Blocks.Add(block);
+
+                    Console.WriteLine(DateTime.Now);
                 }
             }
         }
